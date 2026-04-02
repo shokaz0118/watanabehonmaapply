@@ -18,12 +18,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Install backend deps
+      - name: Clean install backend deps
         working-directory: ./backend
-        run: npm install
-      - name: Install frontend deps
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
+      - name: Clean install frontend deps
         working-directory: ./frontend
-        run: npm install
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
       - name: Build frontend
         working-directory: ./frontend
         run: npm run build
