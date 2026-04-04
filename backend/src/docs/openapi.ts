@@ -2,29 +2,54 @@
 // このオブジェクトを Swagger UI と Postman の両方で使います。
 // - Swagger UI: ブラウザから「Try it out」でAPI実行
 // - Postman: /api/openapi.json をインポートしてコレクション化
+//
+// このファイルの責任範囲:
+// 1. APIの「説明書」を1か所にまとめる
+// 2. どのURLに、どんな入力を送るかを定義する
+// 3. どんなレスポンスが返るか（成功/失敗）を定義する
+//
+// このファイルでやらないこと:
+// - 実際の処理（DB保存など）
+// - バリデーション実行
+// それらは Controller / Service / Repository 側で実行されます。
+// ここは「仕様の地図」です。
 
 const openApiDocument = {
+  // OpenAPIのバージョン。Swagger UI が読むときに使います。
   openapi: "3.0.3",
+
+  // 仕様書そのもののタイトルや説明。
   info: {
     title: "AI通知アプリ API",
     version: "1.0.0",
     description: "認証・通知ルール管理のAPI仕様",
   },
+
+  // APIサーバーの接続先一覧。
+  // ローカル開発では localhost:3001 を使います。
   servers: [
     {
       url: "http://localhost:3001",
       description: "Local",
     },
   ],
+
+  // 画面上でAPIをグループ分けするラベルです。
+  // Swagger UIの左側メニューでまとまり表示されます。
   tags: [
     { name: "Health", description: "稼働確認" },
     { name: "Auth", description: "認証" },
     { name: "Rules", description: "通知ルール" },
   ],
+
+  // paths は「URLごとの定義」です。
+  // ここに GET / POST / PATCH などを1つずつ書きます。
   paths: {
     "/api/health": {
       get: {
+        // どのグループに表示するか
         tags: ["Health"],
+        // 一行説明
         summary: "ヘルスチェック",
         responses: {
           "200": {
@@ -48,10 +73,15 @@ const openApiDocument = {
       post: {
         tags: ["Auth"],
         summary: "ユーザー登録",
+
+        // requestBody は「リクエストの中身」の定義です。
+        // required: true なのでbody必須です。
         requestBody: {
           required: true,
           content: {
             "application/json": {
+              // $ref は「components/schemas の定義を再利用する」という意味です。
+              // 同じ型を何度もコピペしなくて済みます。
               schema: {
                 $ref: "#/components/schemas/RegisterRequest",
               },
@@ -59,6 +89,7 @@ const openApiDocument = {
           },
         },
         responses: {
+          // 200: 成功時
           "200": {
             description: "登録成功",
             content: {
@@ -69,6 +100,7 @@ const openApiDocument = {
               },
             },
           },
+          // 400: 入力不足
           "400": {
             description: "入力不足",
             content: {
@@ -79,6 +111,7 @@ const openApiDocument = {
               },
             },
           },
+          // 500: サーバー側の想定外エラー
           "500": {
             description: "サーバーエラー",
             content: {
@@ -117,6 +150,7 @@ const openApiDocument = {
               },
             },
           },
+          // 401: 認証失敗（ID/パスワード不一致など）
           "401": {
             description: "認証失敗",
             content: {
@@ -150,6 +184,8 @@ const openApiDocument = {
             content: {
               "application/json": {
                 schema: {
+                  // 一覧なので type: array。
+                  // items に1件分の型（RuleResponse）を指定します。
                   type: "array",
                   items: {
                     $ref: "#/components/schemas/RuleResponse",
@@ -217,9 +253,87 @@ const openApiDocument = {
         },
       },
     },
+    "/api/rules/{id}": {
+      patch: {
+        tags: ["Rules"],
+        summary: "通知ルール更新",
+
+        // parameters はURLパスの変数です。
+        // /api/rules/{id} の {id} 部分を定義します。
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+            },
+            description: "更新対象ルールID",
+          },
+        ],
+
+        // 更新は部分更新なので、bodyは項目を必要な分だけ送ります。
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/UpdateRuleRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "更新成功",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/RuleResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "入力不正",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/InvalidInputError",
+                },
+              },
+            },
+          },
+          "404": {
+            description: "対象なし",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/NotFoundError",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "サーバーエラー",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/InternalError",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   },
+
+  // components/schemas は「型の部品置き場」です。
+  // paths側から $ref で参照して再利用します。
   components: {
     schemas: {
+      // ===== Auth系 =====
       RegisterRequest: {
         type: "object",
         properties: {
@@ -251,6 +365,7 @@ const openApiDocument = {
         },
         required: ["token"],
       },
+      // ===== Rules系 =====
       CreateRuleRequest: {
         type: "object",
         properties: {
@@ -261,6 +376,19 @@ const openApiDocument = {
         },
         required: ["theme", "time", "frequency"],
       },
+      UpdateRuleRequest: {
+        type: "object",
+        properties: {
+          theme: { type: "string", example: "新しい名言" },
+          time: { type: "string", example: "16:30" },
+          frequency: { type: "string", enum: ["daily", "weekdays", "weekly"], example: "weekdays" },
+          is_enabled: { type: "boolean", example: false },
+        },
+        description: "更新したい項目だけを送る（最低1項目は必須）",
+      },
+
+      // RuleResponse は一覧取得・作成・更新で共通利用。
+      // 返却時のキー名（snake_case）をここで固定します。
       RuleResponse: {
         type: "object",
         properties: {
@@ -302,8 +430,17 @@ const openApiDocument = {
         },
         required: ["error"],
       },
+      NotFoundError: {
+        type: "object",
+        properties: {
+          error: { type: "string", example: "Not found" },
+        },
+        required: ["error"],
+      },
     },
   },
 } as const;
 
+// index.tsx から import され、
+// /api/openapi.json と /api/docs で使われます。
 export default openApiDocument;

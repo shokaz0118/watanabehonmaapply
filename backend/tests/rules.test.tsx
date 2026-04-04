@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, jest, test } from "@jest/globals";
 // 本物のDBは使わず、呼ばれたかどうかだけを調べます。
 const mockRuleCreate = jest.fn<() => Promise<any>>();
 const mockRuleFindMany = jest.fn<() => Promise<any>>();
+const mockRuleFindUnique = jest.fn<() => Promise<any>>();
+const mockRuleUpdate = jest.fn<() => Promise<any>>();
 
 // Prisma（DBに話しかける道具）を、テスト用のニセモノに差し替えます。
 // こうすると、テスト中に本当にDBへ書き込まれません。
@@ -14,12 +16,16 @@ jest.mock("@prisma/client", () => ({
       create: mockRuleCreate,
       // rule.findMany が呼ばれたときは、一覧取得用のにせ関数を使います。
       findMany: mockRuleFindMany,
+      // 更新API用: id検索のにせ関数です。
+      findUnique: mockRuleFindUnique,
+      // 更新API用: updateのにせ関数です。
+      update: mockRuleUpdate,
     },
   })),
 }));
 
 // テストしたい本体の関数を読み込みます。
-const { createRule, listRules } = require("../src/rules");
+const { createRule, listRules, updateRule } = require("../src/rules");
 
 function createMockRes() {
   // API は res.status(...).json(...) のように返します。
@@ -418,6 +424,154 @@ describe("listRules（通知ルール一覧API）", () => {
     mockRuleFindMany.mockRejectedValue(new Error("db error"));
 
     await listRules(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: "Internal server error" });
+  });
+});
+
+describe("updateRule（通知ルール更新API）", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test("id が無いなら 400 を返す", async () => {
+    const req = {
+      params: {},
+      body: {
+        theme: "更新後テーマ",
+      },
+    };
+    const res = createMockRes();
+
+    await updateRule(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: "Invalid input" });
+  });
+
+  test("更新項目が1つも無いなら 400 を返す", async () => {
+    const req = {
+      params: { id: "rule_1" },
+      body: {},
+    };
+    const res = createMockRes();
+
+    await updateRule(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: "Invalid input" });
+    expect(mockRuleFindUnique).not.toHaveBeenCalled();
+  });
+
+  test("time が不正形式なら 400 を返す", async () => {
+    const req = {
+      params: { id: "rule_1" },
+      body: {
+        time: "3pm",
+      },
+    };
+    const res = createMockRes();
+
+    await updateRule(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: "Invalid input" });
+    expect(mockRuleFindUnique).not.toHaveBeenCalled();
+  });
+
+  test("対象IDが存在しないなら 404 を返す", async () => {
+    const req = {
+      params: { id: "rule_missing" },
+      body: {
+        theme: "更新後テーマ",
+      },
+    };
+    const res = createMockRes();
+
+    mockRuleFindUnique.mockResolvedValue(null);
+
+    await updateRule(req, res);
+
+    expect(mockRuleFindUnique).toHaveBeenCalledWith({
+      where: {
+        id: "rule_missing",
+      },
+    });
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: "Not found" });
+    expect(mockRuleUpdate).not.toHaveBeenCalled();
+  });
+
+  test("入力が正しければ更新し、snake_case で返す", async () => {
+    const req = {
+      params: { id: "rule_1" },
+      body: {
+        theme: "  新しい名言  ",
+        time: "16:30",
+        frequency: "weekdays",
+        is_enabled: false,
+      },
+    };
+    const res = createMockRes();
+
+    mockRuleFindUnique.mockResolvedValue({
+      id: "rule_1",
+      theme: "旧テーマ",
+      time: "15:00",
+      frequency: "daily",
+      isEnabled: true,
+      createdAt: new Date("2026-04-01T10:00:00.000Z"),
+      updatedAt: new Date("2026-04-01T10:00:00.000Z"),
+    });
+
+    mockRuleUpdate.mockResolvedValue({
+      id: "rule_1",
+      theme: "新しい名言",
+      time: "16:30",
+      frequency: "weekdays",
+      isEnabled: false,
+      createdAt: new Date("2026-04-01T10:00:00.000Z"),
+      updatedAt: new Date("2026-04-07T09:00:00.000Z"),
+    });
+
+    await updateRule(req, res);
+
+    expect(mockRuleUpdate).toHaveBeenCalledWith({
+      where: {
+        id: "rule_1",
+      },
+      data: {
+        theme: "新しい名言",
+        time: "16:30",
+        frequency: "weekdays",
+        isEnabled: false,
+      },
+    });
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith({
+      id: "rule_1",
+      theme: "新しい名言",
+      time: "16:30",
+      frequency: "weekdays",
+      is_enabled: false,
+      created_at: new Date("2026-04-01T10:00:00.000Z"),
+      updated_at: new Date("2026-04-07T09:00:00.000Z"),
+    });
+  });
+
+  test("更新中に例外が起きたら 500 を返す", async () => {
+    const req = {
+      params: { id: "rule_1" },
+      body: {
+        theme: "更新後テーマ",
+      },
+    };
+    const res = createMockRes();
+
+    mockRuleFindUnique.mockRejectedValue(new Error("db error"));
+
+    await updateRule(req, res);
 
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ error: "Internal server error" });
