@@ -2,36 +2,49 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - "**"
   pull_request:
-    branches: [ main ]
+    branches:
+      - "**"
 
 jobs:
-  build:
+  backend-unit-tests:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20.x]
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js
+
+      - name: Use Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-      - name: Clean install backend deps
+          node-version: 20.x
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
         working-directory: ./backend
-        run: |
-          rm -rf node_modules package-lock.json
-          npm cache clean --force
-          npm install
-      - name: Clean install frontend deps
+        run: npm ci
+
+      - name: Run backend unit tests
+        working-directory: ./backend
+        run: npm test
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
         working-directory: ./frontend
-        run: |
-          rm -rf node_modules package-lock.json
-          npm cache clean --force
-          npm install
+        run: npm ci
+
       - name: Build frontend
         working-directory: ./frontend
         run: npm run build
-      - name: Run backend tests (none)
-        run: echo "No tests configured"

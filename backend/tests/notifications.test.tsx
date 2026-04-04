@@ -158,7 +158,9 @@ describe("listNotifications（通知一覧API）", () => {
   });
 
   test("データが0件なら空配列を返す", async () => {
-    const req = {};
+    const req = {
+      query: {},
+    };
     const res = createMockRes();
 
     mockNotificationFindMany.mockResolvedValue([]);
@@ -169,13 +171,17 @@ describe("listNotifications（通知一覧API）", () => {
       orderBy: {
         createdAt: "desc",
       },
+      skip: 0,
+      take: 20,
     });
     expect(res.status).not.toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith([]);
   });
 
   test("通知一覧を新しい順で取得し、snake_caseで返す", async () => {
-    const req = {};
+    const req = {
+      query: {},
+    };
     const res = createMockRes();
 
     mockNotificationFindMany.mockResolvedValue([
@@ -227,8 +233,75 @@ describe("listNotifications（通知一覧API）", () => {
     ]);
   });
 
+  test("is_read=false が指定されたら未読のみ取得する", async () => {
+    const req = {
+      query: {
+        is_read: "false",
+      },
+    };
+    const res = createMockRes();
+
+    mockNotificationFindMany.mockResolvedValue([]);
+
+    await listNotifications(req, res);
+
+    expect(mockNotificationFindMany).toHaveBeenCalledWith({
+      where: {
+        isRead: false,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip: 0,
+      take: 20,
+    });
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith([]);
+  });
+
+  test("page と page_size でページングできる", async () => {
+    const req = {
+      query: {
+        page: "2",
+        page_size: "3",
+      },
+    };
+    const res = createMockRes();
+
+    mockNotificationFindMany.mockResolvedValue([]);
+
+    await listNotifications(req, res);
+
+    expect(mockNotificationFindMany).toHaveBeenCalledWith({
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip: 3,
+      take: 3,
+    });
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith([]);
+  });
+
+  test("page が不正な値なら 400 を返す", async () => {
+    const req = {
+      query: {
+        page: "0",
+      },
+    };
+    const res = createMockRes();
+
+    await listNotifications(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: "Invalid input" });
+    expect(mockNotificationFindMany).not.toHaveBeenCalled();
+  });
+
   test("一覧取得中に例外が起きたら 500 を返す", async () => {
-    const req = {};
+    const req = {
+      query: {},
+    };
     const res = createMockRes();
 
     mockNotificationFindMany.mockRejectedValue(new Error("db error"));

@@ -443,6 +443,40 @@ const openApiDocument = {
       get: {
         tags: ["Notifications"],
         summary: "通知履歴一覧取得",
+        parameters: [
+          {
+            name: "is_read",
+            in: "query",
+            required: false,
+            schema: {
+              type: "string",
+              enum: ["true", "false"],
+            },
+            description: "既読状態で絞り込み。未読のみは false を指定",
+          },
+          {
+            name: "page",
+            in: "query",
+            required: false,
+            schema: {
+              type: "integer",
+              minimum: 1,
+              default: 1,
+            },
+            description: "ページ番号（1始まり）",
+          },
+          {
+            name: "page_size",
+            in: "query",
+            required: false,
+            schema: {
+              type: "integer",
+              minimum: 1,
+              default: 20,
+            },
+            description: "1ページあたりの件数",
+          },
+        ],
         responses: {
           "200": {
             description: "取得成功",

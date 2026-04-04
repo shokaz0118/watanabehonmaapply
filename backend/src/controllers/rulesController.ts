@@ -8,6 +8,9 @@ import {
 } from "../services/ruleService";
 import type { RuleRecord } from "../repositories/ruleRepository";
 
+// =========================================================
+// Rules Controller
+// =========================================================
 // Controller は「HTTPの入口」です。
 // req（受け取り）と res（返し）を扱います。
 // 細かい業務ルールは Service に任せます。
@@ -69,6 +72,7 @@ export async function createRule(req: RequestLike, res: ResponseLike): Promise<R
     const created = await createRuleService(req.body || {});
 
     // Service から null が返ったら入力エラーです。
+    // 例: themeが空、time形式が不正、frequencyが許可外 など。
     if (!created) {
       return res.status(400).json({ error: "Invalid input" });
     }
@@ -122,6 +126,7 @@ export async function updateRule(req: UpdateRequestLike, res: ResponseLike): Pro
 
     // Service結果をHTTPコードに変換します。
     // NOT_FOUND は404、それ以外の入力不正は400にします。
+    // こうしておくと、ControllerでHTTPルールが一目で分かります。
     if (result.ok === false) {
       if (result.error === "NOT_FOUND") {
         return res.status(404).json({ error: "Not found" });
@@ -153,6 +158,9 @@ export async function deleteRule(req: DeleteRequestLike, res: ResponseLike): Pro
     });
 
     // Service結果をHTTPコードに変換。
+    // - INVALID_INPUT: 400
+    // - NOT_FOUND: 404
+    // - OK: 204
     if (result.ok === false) {
       if (result.error === "NOT_FOUND") {
         return res.status(404).json({ error: "Not found" });

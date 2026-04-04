@@ -1,5 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 
+// =========================================================
+// Rule Repository
+// =========================================================
 // Repository は「DB専用の場所」です。
 // ここには、DBに保存する・DBから取る処理だけを書きます。
 // 入力チェックやHTTPの話は、ここではしません。
@@ -81,6 +84,7 @@ export type UpdateRuleRepositoryInput = {
 export async function updateRuleRecordById(id: string, data: UpdateRuleRepositoryInput): Promise<RuleRecord> {
   // prisma.rule.update は UPDATE に相当します。
   // where で対象を絞り、data の項目だけ更新します。
+  // dataに含まれない項目は変更されません（部分更新）。
   return prisma.rule.update({
     where: {
       id,
@@ -94,6 +98,7 @@ export async function updateRuleRecordById(id: string, data: UpdateRuleRepositor
 export async function deleteRuleRecordById(id: string): Promise<void> {
   // prisma.rule.delete は DELETE に相当します。
   // 戻り値の中身はこのAPIでは使わないので、void にしています。
+  // 返り値を使わないことで「削除した事実」だけを明示します。
   await prisma.rule.delete({
     where: {
       id,

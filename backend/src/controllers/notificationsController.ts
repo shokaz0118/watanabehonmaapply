@@ -1,17 +1,30 @@
 import {
   generateNotificationService,
-  listNotificationsService,
+  listNotificationsWithQueryService,
   type GenerateNotificationInput,
+  type ListNotificationsInput,
   markNotificationAsReadService,
 } from "../services/notificationService";
 import type { NotificationRecord } from "../repositories/notificationRepository";
 
-// Notification APIのHTTP入口です。
-// HTTPリクエストを受けてServiceを呼び、
-// 結果をHTTPレスポンスへ変換します。
+// =========================================================
+// Notification Controller
+// =========================================================
+// Controller層は「HTTPとServiceの橋渡し」を担当します。
+//
+// ここでやること:
+// - req から body/query/params を取り出してServiceへ渡す
+// - Serviceの結果を status / json に変換する
+// - 例外を500に変換する
+//
+// ここでやらないこと:
+// - 業務ルールの判定
+// - DBアクセス
+// それらはService / Repositoryに分離しています。
 
 type RequestLike = {
   body?: GenerateNotificationInput;
+  query?: ListNotificationsInput;
   params?: {
     id?: unknown;
   };
@@ -23,7 +36,9 @@ type ResponseLike = {
 };
 
 function toNotificationResponse(notification: NotificationRecord) {
-  // API契約として snake_case にそろえて返します。
+  // DBや内部型は camelCase ですが、
+  // API契約は snake_case で統一しています。
+  // そのため、返却直前にここで変換します。
   return {
     id: notification.id,
     rule_id: notification.ruleId,
@@ -39,8 +54,11 @@ function toNotificationResponse(notification: NotificationRecord) {
 // 通知を手動で1件生成するAPI。
 export async function generateNotification(req: RequestLike, res: ResponseLike): Promise<ResponseLike> {
   try {
+    // bodyがない場合でもServiceへは空オブジェクトを渡して
+    // 入力チェックを一元化します。
     const result = await generateNotificationService(req.body || {});
 
+    // ServiceのerrorコードをHTTPコードへ変換します。
     if (result.ok === false) {
       if (result.error === "NOT_FOUND") {
         return res.status(404).json({ error: "Not found" });
@@ -57,8 +75,15 @@ export async function generateNotification(req: RequestLike, res: ResponseLike):
 // 通知一覧を返すAPI。
 export async function listNotifications(_req: RequestLike, res: ResponseLike): Promise<ResponseLike> {
   try {
-    const notifications = await listNotificationsService();
-    return res.json(notifications.map((notification) => toNotificationResponse(notification)));
+    // クエリが無いときは空オブジェクトで解釈します。
+    const result = await listNotificationsWithQueryService(_req.query || {});
+
+    // クエリ値が不正なら400を返します。
+    if (result.ok === false) {
+      return res.status(400).json({ error: "Invalid input" });
+    }
+
+    return res.json(result.data.map((notification) => toNotificationResponse(notification)));
   } catch (_error) {
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -68,10 +93,12 @@ export async function listNotifications(_req: RequestLike, res: ResponseLike): P
 // URLの :id を受け取り、対象通知の is_read を true に更新します。
 export async function markNotificationAsRead(req: RequestLike, res: ResponseLike): Promise<ResponseLike> {
   try {
+    // params.id をServiceへ渡し、入力検証と存在確認はServiceに任せます。
     const result = await markNotificationAsReadService({
       id: req.params?.id,
     });
 
+    // NOT_FOUND と INVALID_INPUT をHTTPステータスへマッピングします。
     if (result.ok === false) {
       if (result.error === "NOT_FOUND") {
         return res.status(404).json({ error: "Not found" });

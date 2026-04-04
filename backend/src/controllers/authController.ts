@@ -1,8 +1,22 @@
 import type { Request, Response } from "express";
 import { loginService, registerService } from "../services/authService";
 
-// AuthController は認証APIのHTTP部分を担当します。
-// 入力は req から受け取り、結果は res に返します。
+// =========================================================
+// Auth Controller
+// =========================================================
+// このファイルは認証APIのHTTP層です。
+//
+// ここでやること:
+// 1. reqからbodyを取り出す
+// 2. Serviceを呼び出す
+// 3. Service結果をHTTPステータスへ変換する
+// 4. 想定外例外を500に統一する
+//
+// ここでやらないこと:
+// - パスワード照合
+// - JWT作成
+// - DBアクセス
+// これらはService/Repositoryに委譲します。
 
 // 今回の auth API で受け取る body の形です。
 type AuthBody = {
@@ -14,6 +28,7 @@ type AuthBody = {
 export async function register(req: Request<{}, {}, AuthBody>, res: Response): Promise<Response> {
   try {
     // Serviceに業務処理をお願いする
+    // body がないケースでも {} を渡してService側の入力チェックに集約します。
     const result = await registerService(req.body || {});
 
     // 入力不足なら 400 を返す
@@ -33,6 +48,7 @@ export async function register(req: Request<{}, {}, AuthBody>, res: Response): P
 export async function login(req: Request<{}, {}, AuthBody>, res: Response): Promise<Response> {
   try {
     // Serviceに業務処理をお願いする
+    // INVALIDの詳細をあえて分けない方針はServiceで決めています。
     const result = await loginService(req.body || {});
 
     // 認証失敗なら 401
