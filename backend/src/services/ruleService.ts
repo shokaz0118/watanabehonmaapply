@@ -1,5 +1,6 @@
 import {
   createRuleRecord,
+  deleteRuleRecordById,
   findRuleRecordById,
   listRuleRecords,
   type RuleRecord,
@@ -206,4 +207,44 @@ export async function updateRuleService(input: UpdateRuleInput): Promise<UpdateR
 
   // 6. 成功結果を返す
   return { ok: true, data: updated };
+}
+
+export type DeleteRuleInput = {
+  id?: unknown;
+};
+
+export type DeleteRuleServiceResult =
+  | {
+      ok: true;
+    }
+  | {
+      ok: false;
+      error: "INVALID_INPUT" | "NOT_FOUND";
+    };
+
+// ルール削除の業務ロジック。
+// - idの妥当性チェック
+// - 対象の存在確認
+// - 削除実行
+// をこの順で行います。
+export async function deleteRuleService(input: DeleteRuleInput): Promise<DeleteRuleServiceResult> {
+  // 1. id が空や不正なら処理しない
+  if (!isValidId(input.id)) {
+    return { ok: false, error: "INVALID_INPUT" };
+  }
+
+  // 2. 前後空白を削って正規化
+  const id = input.id.trim();
+
+  // 3. 先に存在確認（存在しないIDは削除しない）
+  const existing = await findRuleRecordById(id);
+  if (!existing) {
+    return { ok: false, error: "NOT_FOUND" };
+  }
+
+  // 4. 削除実行
+  await deleteRuleRecordById(id);
+
+  // 5. 成功
+  return { ok: true };
 }

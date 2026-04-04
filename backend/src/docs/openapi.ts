@@ -326,6 +326,59 @@ const openApiDocument = {
           },
         },
       },
+      delete: {
+        tags: ["Rules"],
+        summary: "通知ルール削除",
+
+        // pathの id を受け取って削除対象を決めます。
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+            },
+            description: "削除対象ルールID",
+          },
+        ],
+
+        responses: {
+          "204": {
+            description: "削除成功（本文なし）",
+          },
+          "400": {
+            description: "入力不正",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/InvalidInputError",
+                },
+              },
+            },
+          },
+          "404": {
+            description: "対象なし",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/NotFoundError",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "サーバーエラー",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/InternalError",
+                },
+              },
+            },
+          },
+        },
+      },
     },
   },
 

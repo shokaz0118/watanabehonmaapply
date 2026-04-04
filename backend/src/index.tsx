@@ -2,7 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import swaggerUi from "swagger-ui-express";
 import { login, register } from "./auth";
-import { createRule, listRules, updateRule } from "./rules";
+import { createRule, deleteRule, listRules, updateRule } from "./rules";
 import openApiDocument from "./docs/openapi";
 
 dotenv.config();
@@ -43,6 +43,7 @@ app.post("/api/auth/login", login);
 app.post("/api/rules", createRule);
 app.get("/api/rules", listRules);
 app.patch("/api/rules/:id", updateRule);
+app.delete("/api/rules/:id", deleteRule);
 
 app.listen(port, () => {
   console.log(`Backend listening at http://localhost:${port}`);

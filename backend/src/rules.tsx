@@ -9,4 +9,4 @@
 // - controllers/rulesController: HTTPの受け渡し
 // - services/ruleService: 入力チェックと業務ルール
 // - repositories/ruleRepository: DBアクセス
-export { createRule, listRules, updateRule } from "./controllers/rulesController";
+export { createRule, listRules, updateRule, deleteRule } from "./controllers/rulesController";

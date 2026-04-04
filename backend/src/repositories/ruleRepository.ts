@@ -88,3 +88,15 @@ export async function updateRuleRecordById(id: string, data: UpdateRuleRepositor
     data,
   });
 }
+
+// id を指定して、ルールを1件削除する関数です。
+// ここでは「削除する」というDB操作だけを担当します。
+export async function deleteRuleRecordById(id: string): Promise<void> {
+  // prisma.rule.delete は DELETE に相当します。
+  // 戻り値の中身はこのAPIでは使わないので、void にしています。
+  await prisma.rule.delete({
+    where: {
+      id,
+    },
+  });
+}

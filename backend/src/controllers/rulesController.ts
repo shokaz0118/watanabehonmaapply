@@ -1,5 +1,6 @@
 import {
   createRuleService,
+  deleteRuleService,
   listRulesService,
   updateRuleService,
   type CreateRuleInput,
@@ -34,6 +35,7 @@ type RequestLike = {
 type ResponseLike = {
   status: (code: number) => ResponseLike;
   json: (payload: unknown) => ResponseLike;
+  end: () => ResponseLike;
 };
 
 // DB形式（camelCase）を API形式（snake_case）へ変換する関数です。
@@ -131,6 +133,37 @@ export async function updateRule(req: UpdateRequestLike, res: ResponseLike): Pro
     return res.json(toRuleResponse(result.data));
   } catch (_error) {
     // 予想外エラー（DB障害など）
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+type DeleteRequestLike = {
+  params?: {
+    id?: string;
+  };
+};
+
+// 通知ルールを1件削除するAPIです。
+// 成功時は 204 No Content（本文なし）で返します。
+export async function deleteRule(req: DeleteRequestLike, res: ResponseLike): Promise<ResponseLike> {
+  try {
+    // URLの :id を Service に渡す。
+    const result = await deleteRuleService({
+      id: req.params?.id,
+    });
+
+    // Service結果をHTTPコードに変換。
+    if (result.ok === false) {
+      if (result.error === "NOT_FOUND") {
+        return res.status(404).json({ error: "Not found" });
+      }
+      return res.status(400).json({ error: "Invalid input" });
+    }
+
+    // 削除成功時は本文を返さない（204）。
+    return res.status(204).end();
+  } catch (_error) {
+    // 予想外エラー（DB障害など）は 500。
     return res.status(500).json({ error: "Internal server error" });
   }
 }

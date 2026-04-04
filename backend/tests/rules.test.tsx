@@ -6,6 +6,7 @@ const mockRuleCreate = jest.fn<() => Promise<any>>();
 const mockRuleFindMany = jest.fn<() => Promise<any>>();
 const mockRuleFindUnique = jest.fn<() => Promise<any>>();
 const mockRuleUpdate = jest.fn<() => Promise<any>>();
+const mockRuleDelete = jest.fn<() => Promise<any>>();
 
 // Prisma（DBに話しかける道具）を、テスト用のニセモノに差し替えます。
 // こうすると、テスト中に本当にDBへ書き込まれません。
@@ -20,12 +21,14 @@ jest.mock("@prisma/client", () => ({
       findUnique: mockRuleFindUnique,
       // 更新API用: updateのにせ関数です。
       update: mockRuleUpdate,
+      // 削除API用: deleteのにせ関数です。
+      delete: mockRuleDelete,
     },
   })),
 }));
 
 // テストしたい本体の関数を読み込みます。
-const { createRule, listRules, updateRule } = require("../src/rules");
+const { createRule, listRules, updateRule, deleteRule } = require("../src/rules");
 
 function createMockRes() {
   // API は res.status(...).json(...) のように返します。
@@ -38,6 +41,9 @@ function createMockRes() {
 
   // json がどんなデータで呼ばれたか記録します。
   res.json = jest.fn(() => res);
+
+  // 204 No Content で本文なし終了するときに使う関数です。
+  res.end = jest.fn(() => res);
   return res;
 }
 
@@ -572,6 +578,98 @@ describe("updateRule（通知ルール更新API）", () => {
     mockRuleFindUnique.mockRejectedValue(new Error("db error"));
 
     await updateRule(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: "Internal server error" });
+  });
+});
+
+describe("deleteRule（通知ルール削除API）", () => {
+  beforeEach(() => {
+    // テスト同士の記録が混ざらないように毎回リセットします。
+    jest.clearAllMocks();
+  });
+
+  test("id が無いなら 400 を返す", async () => {
+    const req = {
+      params: {},
+    };
+    const res = createMockRes();
+
+    await deleteRule(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: "Invalid input" });
+    expect(mockRuleFindUnique).not.toHaveBeenCalled();
+    expect(mockRuleDelete).not.toHaveBeenCalled();
+  });
+
+  test("対象IDが存在しないなら 404 を返す", async () => {
+    const req = {
+      params: {
+        id: "rule_missing",
+      },
+    };
+    const res = createMockRes();
+
+    mockRuleFindUnique.mockResolvedValue(null);
+
+    await deleteRule(req, res);
+
+    expect(mockRuleFindUnique).toHaveBeenCalledWith({
+      where: {
+        id: "rule_missing",
+      },
+    });
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ error: "Not found" });
+    expect(mockRuleDelete).not.toHaveBeenCalled();
+  });
+
+  test("存在するIDなら削除して 204 で終了する", async () => {
+    const req = {
+      params: {
+        id: "rule_1",
+      },
+    };
+    const res = createMockRes();
+
+    mockRuleFindUnique.mockResolvedValue({
+      id: "rule_1",
+      theme: "名言",
+      time: "15:00",
+      frequency: "daily",
+      isEnabled: true,
+      createdAt: new Date("2026-04-01T10:00:00.000Z"),
+      updatedAt: new Date("2026-04-01T10:00:00.000Z"),
+    });
+    mockRuleDelete.mockResolvedValue({
+      id: "rule_1",
+    });
+
+    await deleteRule(req, res);
+
+    expect(mockRuleDelete).toHaveBeenCalledWith({
+      where: {
+        id: "rule_1",
+      },
+    });
+    expect(res.status).toHaveBeenCalledWith(204);
+    expect(res.end).toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
+  });
+
+  test("削除中に例外が起きたら 500 を返す", async () => {
+    const req = {
+      params: {
+        id: "rule_1",
+      },
+    };
+    const res = createMockRes();
+
+    mockRuleFindUnique.mockRejectedValue(new Error("db error"));
+
+    await deleteRule(req, res);
 
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ error: "Internal server error" });
