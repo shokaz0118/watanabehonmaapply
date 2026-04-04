@@ -42,7 +42,7 @@ export type ListNotificationsInput = {
   is_read?: unknown;
   page?: unknown;
   page_size?: unknown;
-};
+  userId: number;
 
 // 通知生成処理の戻り値です。
 // ok=trueならdataを持ち、ok=falseならerrorを持ちます。
@@ -142,10 +142,11 @@ export async function generateNotificationService(
 
 // 後方互換用の簡易一覧取得です。
 // 既存呼び出し向けに、デフォルト設定（1ページ目・20件）で返します。
-export async function listNotificationsService(): Promise<NotificationRecord[]> {
+export async function listNotificationsService(userId: number): Promise<NotificationRecord[]> {
   return listNotificationRecords({
     skip: 0,
     take: 20,
+    userId: userId,
   });
 }
 
@@ -217,9 +218,10 @@ export async function listNotificationsWithQueryService(
   // 3) page/page_size を skip/take へ変換して取得します。
   //    例: page=2, page_size=20 => skip=20, take=20
   const notifications = await listNotificationRecords({
-    isRead,
+    isRead: isRead,
     skip: (page - 1) * pageSize,
     take: pageSize,
+    userId: input.userId,
   });
 
   return {

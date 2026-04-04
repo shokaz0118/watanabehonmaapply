@@ -6,6 +6,7 @@ import {
   markNotificationAsReadService,
 } from "../services/notificationService";
 import type { NotificationRecord } from "../repositories/notificationRepository";
+import { extractUserIdFromToken } from "../utils/jwt";
 
 // =========================================================
 // Notification Controller
@@ -27,6 +28,9 @@ type RequestLike = {
   query?: ListNotificationsInput;
   params?: {
     id?: unknown;
+  };
+  headers?: {
+    authorization?: string;
   };
 };
 
@@ -76,7 +80,17 @@ export async function generateNotification(req: RequestLike, res: ResponseLike):
 export async function listNotifications(_req: RequestLike, res: ResponseLike): Promise<ResponseLike> {
   try {
     // クエリが無いときは空オブジェクトで解釈します。
-    const result = await listNotificationsWithQueryService(_req.query || {});
+    // Authorization ヘッダーから userId を抽出
+    const userId = extractUserIdFromToken(_req.headers?.authorization);
+    if (userId === null) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // クエリが無いときは空オブジェクトで解釈します。
+    const result = await listNotificationsWithQueryService({
+      ..._req.query,
+      userId,
+    } || {});
 
     // クエリ値が不正なら400を返します。
     if (result.ok === false) {

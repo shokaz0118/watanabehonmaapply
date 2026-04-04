@@ -43,7 +43,8 @@ export type ListNotificationRepositoryInput = {
   skip: number;
   // 何件取得するか（ページング）
   take: number;
-};
+  // このユーザーの通知だけを取得する
+  userId: number;
 
 // 通知を1件保存する関数です。
 // ここでは入力値をそのままDBへ渡します。
@@ -63,7 +64,10 @@ export async function listNotificationRecords(
 ): Promise<NotificationRecord[]> {
   // isRead が true/false のときだけ where を作ります。
   // undefined なら where自体を省略し、全件対象にします。
-  const where = typeof input.isRead === "boolean" ? { isRead: input.isRead } : undefined;
+  const where = {
+    ...(typeof input.isRead === "boolean" ? { isRead: input.isRead } : {}),
+    userId: input.userId,
+  };
 
   return prisma.notification.findMany({
     where,

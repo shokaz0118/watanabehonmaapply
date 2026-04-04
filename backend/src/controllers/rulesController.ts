@@ -7,6 +7,7 @@ import {
   type UpdateRuleInput,
 } from "../services/ruleService";
 import type { RuleRecord } from "../repositories/ruleRepository";
+import { extractUserIdFromToken } from "../utils/jwt";
 
 // =========================================================
 // Rules Controller
@@ -30,6 +31,9 @@ type RequestLike = {
   body?: CreateRuleInput;
   params?: {
     id?: string;
+  };
+  headers?: {
+    authorization?: string;
   };
 };
 
@@ -63,13 +67,20 @@ function toRuleResponse(rule: RuleRecord) {
 // 通知ルールを1件作るAPIです。
 export async function createRule(req: RequestLike, res: ResponseLike): Promise<ResponseLike> {
   try {
+    // リクエストのAuthorizationヘッダーからuserIdを抽出します。
+    // トークンが無い or 無効な場合は 401 を返します。
+    const userId = extractUserIdFromToken(req.headers?.authorization);
+    if (userId === null) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
     // body がない場合でも安全に動かせるように空オブジェクトを渡します。
     // ここで呼ぶ createRuleService は、
     // - 入力チェック
     // - 既定値補完
     // - DB保存（Repository経由）
     // まで担当します。
-    const created = await createRuleService(req.body || {});
+    const created = await createRuleService(userId, req.body || {});
 
     // Service から null が返ったら入力エラーです。
     // 例: themeが空、time形式が不正、frequencyが許可外 など。
@@ -88,12 +99,19 @@ export async function createRule(req: RequestLike, res: ResponseLike): Promise<R
 }
 
 // 通知ルール一覧を返すAPIです。
-export async function listRules(_req: RequestLike, res: ResponseLike): Promise<ResponseLike> {
+export async function listRules(req: RequestLike, res: ResponseLike): Promise<ResponseLike> {
   try {
+    // リクエストのAuthorizationヘッダーからuserIdを抽出します。
+    // トークンが無い or 無効な場合は 401 を返します。
+    const userId = extractUserIdFromToken(req.headers?.authorization);
+    if (userId === null) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
     // 一覧をServiceから受け取ります（並び順はService/Repository側の責務）。
     // listRulesService の中で Repository を呼び、
     // DBから「新しい順」でデータを取ってきます。
-    const rules = await listRulesService();
+    const rules = await listRulesService(userId);
 
     // 配列の各要素をAPI形式に変換して返します。
     return res.json(rules.map((rule) => toRuleResponse(rule)));

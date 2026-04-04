@@ -31,6 +31,7 @@ export type RuleRecord = {
 // CreateRuleRepositoryInput は、DB保存時に必要な最小の入力です。
 // ここで isEnabled が camelCase なのは、Prisma のモデル名に合わせているためです。
 export type CreateRuleRepositoryInput = {
+  userId: number;
   theme: string;
   time: string;
   frequency: string;
@@ -50,10 +51,14 @@ export async function createRuleRecord(input: CreateRuleRepositoryInput): Promis
 
 // rules テーブルから一覧を新しい順で取り出す関数です。
 // createdAt: "desc" は「作成日時の降順」、つまり新しい順です。
-export async function listRuleRecords(): Promise<RuleRecord[]> {
+export async function listRuleRecords(userId: number): Promise<RuleRecord[]> {
+  // ユーザーIDでフィルタリングして、そのユーザーのルールだけを取得します。
   // prisma.rule.findMany は SELECT 複数件 に相当します。
   // 並び順だけをここで確定し、呼び出し側は意識しなくて済むようにします。
   return prisma.rule.findMany({
+    where: {
+      userId,
+    },
     orderBy: {
       createdAt: "desc",
     },
