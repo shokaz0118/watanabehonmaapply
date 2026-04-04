@@ -40,6 +40,7 @@ const openApiDocument = {
     { name: "Health", description: "稼働確認" },
     { name: "Auth", description: "認証" },
     { name: "Rules", description: "通知ルール" },
+    { name: "Notifications", description: "通知生成" },
   ],
 
   // paths は「URLごとの定義」です。
@@ -380,6 +381,154 @@ const openApiDocument = {
         },
       },
     },
+    "/api/notifications/generate": {
+      post: {
+        tags: ["Notifications"],
+        summary: "通知を1件手動生成",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/GenerateNotificationRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "生成成功",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/NotificationResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "入力不正",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/InvalidInputError",
+                },
+              },
+            },
+          },
+          "404": {
+            description: "対象ルールなし",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/NotFoundError",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "サーバーエラー",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/InternalError",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/notifications": {
+      get: {
+        tags: ["Notifications"],
+        summary: "通知履歴一覧取得",
+        responses: {
+          "200": {
+            description: "取得成功",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: {
+                    $ref: "#/components/schemas/NotificationResponse",
+                  },
+                },
+              },
+            },
+          },
+          "500": {
+            description: "サーバーエラー",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/InternalError",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/notifications/{id}/read": {
+      patch: {
+        tags: ["Notifications"],
+        summary: "通知を既読にする",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+              type: "string",
+            },
+            description: "既読化する通知ID",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "既読化成功",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/NotificationResponse",
+                },
+              },
+            },
+          },
+          "400": {
+            description: "入力不正",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/InvalidInputError",
+                },
+              },
+            },
+          },
+          "404": {
+            description: "対象通知なし",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/NotFoundError",
+                },
+              },
+            },
+          },
+          "500": {
+            description: "サーバーエラー",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/InternalError",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   },
 
   // components/schemas は「型の部品置き場」です。
@@ -438,6 +587,38 @@ const openApiDocument = {
           is_enabled: { type: "boolean", example: false },
         },
         description: "更新したい項目だけを送る（最低1項目は必須）",
+      },
+
+      GenerateNotificationRequest: {
+        type: "object",
+        properties: {
+          rule_id: { type: "string", example: "rule_1" },
+        },
+        required: ["rule_id"],
+      },
+
+      NotificationResponse: {
+        type: "object",
+        properties: {
+          id: { type: "string", example: "notif_1" },
+          rule_id: { type: "string", example: "rule_1" },
+          scheduled_date: { type: "string", format: "date-time", example: "2026-04-08T15:00:00.000Z" },
+          short_text: { type: "string", example: "継続は力なり。今日の一歩が未来を変える。" },
+          description: { type: "string", example: "大きな成果は、毎日の小さな積み重ねから生まれます。" },
+          action_suggestion: { type: "string", example: "今日は5分だけでも、やると決めたことを続けてみましょう。" },
+          is_read: { type: "boolean", example: false },
+          created_at: { type: "string", format: "date-time", example: "2026-04-08T15:00:00.000Z" },
+        },
+        required: [
+          "id",
+          "rule_id",
+          "scheduled_date",
+          "short_text",
+          "description",
+          "action_suggestion",
+          "is_read",
+          "created_at",
+        ],
       },
 
       // RuleResponse は一覧取得・作成・更新で共通利用。

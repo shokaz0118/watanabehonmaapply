@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import swaggerUi from "swagger-ui-express";
 import { login, register } from "./auth";
 import { createRule, deleteRule, listRules, updateRule } from "./rules";
+import { generateNotification, listNotifications, markNotificationAsRead } from "./notifications";
 import openApiDocument from "./docs/openapi";
 
 dotenv.config();
@@ -44,6 +45,11 @@ app.post("/api/rules", createRule);
 app.get("/api/rules", listRules);
 app.patch("/api/rules/:id", updateRule);
 app.delete("/api/rules/:id", deleteRule);
+
+// 通知API
+app.post("/api/notifications/generate", generateNotification);
+app.get("/api/notifications", listNotifications);
+app.patch("/api/notifications/:id/read", markNotificationAsRead);
 
 app.listen(port, () => {
   console.log(`Backend listening at http://localhost:${port}`);
