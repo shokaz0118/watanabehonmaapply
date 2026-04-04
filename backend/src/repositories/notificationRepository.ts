@@ -28,6 +28,7 @@ export type NotificationRecord = {
 
 // 通知作成時にDBへ渡す入力の形です。
 export type CreateNotificationRepositoryInput = {
+  userId?: number;
   ruleId: string;
   scheduledDate: Date;
   shortText: string;
@@ -43,6 +44,8 @@ export type ListNotificationRepositoryInput = {
   skip: number;
   // 何件取得するか（ページング）
   take: number;
+  // このユーザーの通知だけを取得する
+  userId?: number;
 };
 
 // 通知を1件保存する関数です。
@@ -51,7 +54,7 @@ export async function createNotificationRecord(
   input: CreateNotificationRepositoryInput,
 ): Promise<NotificationRecord> {
   return prisma.notification.create({
-    data: input,
+    data: input as any,
   });
 }
 
@@ -61,12 +64,16 @@ export async function createNotificationRecord(
 export async function listNotificationRecords(
   input: ListNotificationRepositoryInput,
 ): Promise<NotificationRecord[]> {
-  // isRead が true/false のときだけ where を作ります。
-  // undefined なら where自体を省略し、全件対象にします。
-  const where = typeof input.isRead === "boolean" ? { isRead: input.isRead } : undefined;
+  // isRead / userId が指定されたときだけ where を作ります。
+  // どちらも未指定なら where 自体を渡さず、全件対象にします。
+  const filter = {
+    ...(typeof input.isRead === "boolean" ? { isRead: input.isRead } : {}),
+    ...(typeof input.userId === "number" ? { userId: input.userId } : {}),
+  };
+  const where = Object.keys(filter).length > 0 ? filter : undefined;
 
   return prisma.notification.findMany({
-    where,
+    ...(where ? { where: where as any } : {}),
     // 新しい通知を先頭にするため createdAt の降順
     orderBy: {
       createdAt: "desc",
