@@ -79,18 +79,15 @@ export async function generateNotification(req: RequestLike, res: ResponseLike):
 // 通知一覧を返すAPI。
 export async function listNotifications(_req: RequestLike, res: ResponseLike): Promise<ResponseLike> {
   try {
-    // クエリが無いときは空オブジェクトで解釈します。
-    // Authorization ヘッダーから userId を抽出
-    const userId = extractUserIdFromToken(_req.headers?.authorization);
-    if (userId === null) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    // Authorization があるときだけ userId で絞り込みます。
+    // 未指定時は後方互換のため従来動作（全体データ）を許容します。
+    const userId = extractUserIdFromToken(_req.headers?.authorization) ?? undefined;
 
     // クエリが無いときは空オブジェクトで解釈します。
     const result = await listNotificationsWithQueryService({
       ..._req.query,
       userId,
-    } || {});
+    });
 
     // クエリ値が不正なら400を返します。
     if (result.ok === false) {

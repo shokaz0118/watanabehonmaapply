@@ -54,7 +54,7 @@ export type UpdateRuleInput = {
 // 入力チェックを通過した後の「安全な形」です。
 // ここまで来ると theme/time/frequency/isEnabled が必ず入っています。
 type CreateRuleValidInput = {
-  userId: number;
+  userId?: number;
   theme: string;
   time: string;
   frequency: string;
@@ -84,7 +84,7 @@ function isValidId(value: unknown): value is string {
 
 // Controller から来た入力を「保存可能な形」に整える関数です。
 // 不正な値があれば null を返し、呼び出し元に「エラー扱い」を伝えます。
-function normalizeCreateRuleInput(userId: number, input: CreateRuleInput): CreateRuleValidInput | null {
+function normalizeCreateRuleInput(userId: number | undefined, input: CreateRuleInput): CreateRuleValidInput | null {
   const { theme, time, frequency, is_enabled: isEnabledInput } = input;
 
   // 1つでもルール違反があれば null を返します。
@@ -95,7 +95,7 @@ function normalizeCreateRuleInput(userId: number, input: CreateRuleInput): Creat
   // theme は前後の空白を削除して保存します。
   // is_enabled が未指定なら true を既定値にします。
   return {
-    userId,
+    ...(typeof userId === "number" ? { userId } : {}),
     theme: theme.trim(),
     time,
     frequency,
@@ -105,7 +105,7 @@ function normalizeCreateRuleInput(userId: number, input: CreateRuleInput): Creat
 
 // ルール作成の業務ロジック。
 // 入力が不正なら null を返します。
-export async function createRuleService(userId: number, input: CreateRuleInput): Promise<RuleRecord | null> {
+export async function createRuleService(userId: number | undefined, input: CreateRuleInput): Promise<RuleRecord | null> {
   // まず入力を正しい形に整えます。
   const normalized = normalizeCreateRuleInput(userId, input);
   if (!normalized) {
@@ -120,7 +120,7 @@ export async function createRuleService(userId: number, input: CreateRuleInput):
 }
 
 // ルール一覧取得の業務ロジック。
-export async function listRulesService(userId: number): Promise<RuleRecord[]> {
+export async function listRulesService(userId: number | undefined): Promise<RuleRecord[]> {
   // 取得の詳細（orderBy）は Repository 側に集約しています。
   // ここは呼び出しだけにして、DBの知識をServiceに持ち込まないようにします。
   return listRuleRecords(userId);

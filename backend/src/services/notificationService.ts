@@ -42,7 +42,8 @@ export type ListNotificationsInput = {
   is_read?: unknown;
   page?: unknown;
   page_size?: unknown;
-  userId: number;
+  userId?: number;
+};
 
 // 通知生成処理の戻り値です。
 // ok=trueならdataを持ち、ok=falseならerrorを持ちます。
@@ -126,6 +127,7 @@ export async function generateNotificationService(
   // 通知を保存します。
   // 手動生成APIなので scheduledDate は「生成した今の時刻」です。
   const created = await createNotificationRecord({
+    ...(typeof rule.userId === "number" ? { userId: rule.userId } : {}),
     ruleId,
     scheduledDate: new Date(),
     shortText: text.shortText,
@@ -146,7 +148,7 @@ export async function listNotificationsService(userId: number): Promise<Notifica
   return listNotificationRecords({
     skip: 0,
     take: 20,
-    userId: userId,
+    userId,
   });
 }
 

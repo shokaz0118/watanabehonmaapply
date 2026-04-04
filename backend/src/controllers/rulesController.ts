@@ -67,12 +67,9 @@ function toRuleResponse(rule: RuleRecord) {
 // 通知ルールを1件作るAPIです。
 export async function createRule(req: RequestLike, res: ResponseLike): Promise<ResponseLike> {
   try {
-    // リクエストのAuthorizationヘッダーからuserIdを抽出します。
-    // トークンが無い or 無効な場合は 401 を返します。
-    const userId = extractUserIdFromToken(req.headers?.authorization);
-    if (userId === null) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    // Authorizationがあるときだけ userId を抽出してユーザー分離します。
+    // ヘッダー未指定時は後方互換のため従来動作（全体データ）を許容します。
+    const userId = extractUserIdFromToken(req.headers?.authorization) ?? undefined;
 
     // body がない場合でも安全に動かせるように空オブジェクトを渡します。
     // ここで呼ぶ createRuleService は、
@@ -101,12 +98,9 @@ export async function createRule(req: RequestLike, res: ResponseLike): Promise<R
 // 通知ルール一覧を返すAPIです。
 export async function listRules(req: RequestLike, res: ResponseLike): Promise<ResponseLike> {
   try {
-    // リクエストのAuthorizationヘッダーからuserIdを抽出します。
-    // トークンが無い or 無効な場合は 401 を返します。
-    const userId = extractUserIdFromToken(req.headers?.authorization);
-    if (userId === null) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    // Authorizationがあるときだけ userId を抽出してユーザー分離します。
+    // ヘッダー未指定時は後方互換のため従来動作（全体データ）を許容します。
+    const userId = extractUserIdFromToken(req.headers?.authorization) ?? undefined;
 
     // 一覧をServiceから受け取ります（並び順はService/Repository側の責務）。
     // listRulesService の中で Repository を呼び、
