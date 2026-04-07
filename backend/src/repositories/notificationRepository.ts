@@ -108,3 +108,34 @@ export async function markNotificationRecordAsRead(id: string): Promise<Notifica
     },
   });
 }
+
+// 指定された時刻範囲に、同じ rule_id の通知がすでにあるか確認します。
+// 自動配信ジョブの重複作成防止に使います。
+export async function existsNotificationForRuleInRange(ruleId: string, from: Date, to: Date): Promise<boolean> {
+  const found = await prisma.notification.findFirst({
+    where: {
+      ruleId,
+      scheduledDate: {
+        gte: from,
+        lt: to,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  return Boolean(found);
+}
+
+// ユーザーの通知を全件削除します。
+// userId が指定されたときはそのユーザー分だけ、
+// 未指定のときはゲスト通知（userId が null のもの）を全件削除します。
+export async function deleteAllNotificationRecords(userId: number | undefined): Promise<number> {
+  const result = await prisma.notification.deleteMany({
+    where: userId !== undefined
+      ? { userId } as any
+      : { userId: null } as any,
+  });
+  return result.count;
+}

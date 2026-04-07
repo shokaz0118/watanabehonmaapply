@@ -101,9 +101,9 @@ describe("generateNotification（通知生成API）", () => {
       id: "notif_1",
       ruleId: "rule_1",
       scheduledDate: new Date("2026-04-08T15:00:00.000Z"),
-      shortText: "継続は力なり。今日の一歩が未来を変える。",
-      description: "大きな成果は、毎日の小さな積み重ねから生まれます。",
-      actionSuggestion: "今日は5分だけでも、やると決めたことを続けてみましょう。",
+      shortText: "継続は力なり（松下幸之助）",
+      description: "",
+      actionSuggestion: "パナソニック創業者の言葉です。特別な才能よりも、続けることの重要性を説いています。長く続けることが結果につながるという考え方です。",
       isRead: false,
       createdAt: new Date("2026-04-08T15:00:00.000Z"),
     });
@@ -114,21 +114,24 @@ describe("generateNotification（通知生成API）", () => {
       data: {
         ruleId: "rule_1",
         scheduledDate: expect.any(Date),
-        shortText: "継続は力なり。今日の一歩が未来を変える。",
-        description: "大きな成果は、毎日の小さな積み重ねから生まれます。",
-        actionSuggestion: "今日は5分だけでも、やると決めたことを続けてみましょう。",
+        shortText: expect.any(String),
+        description: expect.any(String),
+        actionSuggestion: expect.any(String),
         isRead: false,
       },
     });
+
+    const firstCreateCall = mockNotificationCreate.mock.calls[0] as any;
+    expect(firstCreateCall[0].data.shortText).toMatch(/^.+（.+）$/);
 
     expect(res.status).not.toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith({
       id: "notif_1",
       rule_id: "rule_1",
       scheduled_date: new Date("2026-04-08T15:00:00.000Z"),
-      short_text: "継続は力なり。今日の一歩が未来を変える。",
-      description: "大きな成果は、毎日の小さな積み重ねから生まれます。",
-      action_suggestion: "今日は5分だけでも、やると決めたことを続けてみましょう。",
+      short_text: "継続は力なり（松下幸之助）",
+      description: "",
+      action_suggestion: "パナソニック創業者の言葉です。特別な才能よりも、続けることの重要性を説いています。長く続けることが結果につながるという考え方です。",
       is_read: false,
       created_at: new Date("2026-04-08T15:00:00.000Z"),
     });

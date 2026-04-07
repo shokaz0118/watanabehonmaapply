@@ -490,7 +490,7 @@ describe("updateRule（通知ルール更新API）", () => {
     const req = {
       params: { id: "rule_missing" },
       body: {
-        theme: "更新後テーマ",
+        theme: "雑学",
       },
     };
     const res = createMockRes();
@@ -513,7 +513,7 @@ describe("updateRule（通知ルール更新API）", () => {
     const req = {
       params: { id: "rule_1" },
       body: {
-        theme: "  新しい名言  ",
+        theme: "  名言  ",
         time: "16:30",
         frequency: "weekdays",
         is_enabled: false,
@@ -533,7 +533,7 @@ describe("updateRule（通知ルール更新API）", () => {
 
     mockRuleUpdate.mockResolvedValue({
       id: "rule_1",
-      theme: "新しい名言",
+      theme: "名言",
       time: "16:30",
       frequency: "weekdays",
       isEnabled: false,
@@ -548,7 +548,7 @@ describe("updateRule（通知ルール更新API）", () => {
         id: "rule_1",
       },
       data: {
-        theme: "新しい名言",
+        theme: "名言",
         time: "16:30",
         frequency: "weekdays",
         isEnabled: false,
@@ -557,7 +557,7 @@ describe("updateRule（通知ルール更新API）", () => {
     expect(res.status).not.toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith({
       id: "rule_1",
-      theme: "新しい名言",
+      theme: "名言",
       time: "16:30",
       frequency: "weekdays",
       is_enabled: false,
@@ -570,7 +570,7 @@ describe("updateRule（通知ルール更新API）", () => {
     const req = {
       params: { id: "rule_1" },
       body: {
-        theme: "更新後テーマ",
+        theme: "励まし",
       },
     };
     const res = createMockRes();

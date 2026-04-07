@@ -28,6 +28,7 @@ import {
 // frequency で許可する値のリストです。
 // ここにない値が来たらエラーにします。
 const ALLOWED_FREQUENCIES = new Set(["daily", "weekdays", "weekly"]);
+const ALLOWED_THEMES = new Set(["名言", "雑学", "励まし"]);
 
 // 時刻の形式チェック用。
 // 24時間の HH:mm（例: 07:30, 18:00）だけOKにします。
@@ -77,6 +78,10 @@ function isValidFrequency(value: unknown): value is string {
   return typeof value === "string" && ALLOWED_FREQUENCIES.has(value);
 }
 
+function isValidTheme(value: unknown): value is string {
+  return typeof value === "string" && ALLOWED_THEMES.has(value.trim());
+}
+
 function isValidId(value: unknown): value is string {
   // id は「空でない文字列」だけ受け付けます。
   return typeof value === "string" && value.trim().length > 0;
@@ -88,7 +93,7 @@ function normalizeCreateRuleInput(userId: number | undefined, input: CreateRuleI
   const { theme, time, frequency, is_enabled: isEnabledInput } = input;
 
   // 1つでもルール違反があれば null を返します。
-  if (!isNonEmptyString(theme) || !isValidTime(time) || !isValidFrequency(frequency)) {
+  if (!isValidTheme(theme) || !isValidTime(time) || !isValidFrequency(frequency)) {
     return null;
   }
 
@@ -156,7 +161,7 @@ function buildUpdateData(input: UpdateRuleInput): UpdateRuleRepositoryInput | nu
 
   if (input.theme !== undefined) {
     // theme が渡されたときだけチェック＆更新対象に入れる
-    if (!isNonEmptyString(input.theme)) {
+    if (!isValidTheme(input.theme)) {
       return null;
     }
     updateData.theme = input.theme.trim();

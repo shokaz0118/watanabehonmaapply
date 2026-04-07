@@ -605,7 +605,7 @@ const openApiDocument = {
       CreateRuleRequest: {
         type: "object",
         properties: {
-          theme: { type: "string", example: "名言" },
+          theme: { type: "string", enum: ["名言", "雑学", "励まし"], example: "名言" },
           time: { type: "string", example: "15:00" },
           frequency: { type: "string", enum: ["daily", "weekdays", "weekly"], example: "daily" },
           is_enabled: { type: "boolean", example: true },
@@ -615,7 +615,7 @@ const openApiDocument = {
       UpdateRuleRequest: {
         type: "object",
         properties: {
-          theme: { type: "string", example: "新しい名言" },
+          theme: { type: "string", enum: ["名言", "雑学", "励まし"], example: "雑学" },
           time: { type: "string", example: "16:30" },
           frequency: { type: "string", enum: ["daily", "weekdays", "weekly"], example: "weekdays" },
           is_enabled: { type: "boolean", example: false },
@@ -661,7 +661,7 @@ const openApiDocument = {
         type: "object",
         properties: {
           id: { type: "string", example: "rule_1" },
-          theme: { type: "string", example: "名言" },
+          theme: { type: "string", enum: ["名言", "雑学", "励まし"], example: "名言" },
           time: { type: "string", example: "15:00" },
           frequency: { type: "string", example: "daily" },
           is_enabled: { type: "boolean", example: true },

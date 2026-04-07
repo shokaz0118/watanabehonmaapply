@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { createApiClient } from "./lib/api";
 import { useApiRequest } from "./hooks/useApiRequest";
-import type { NotificationItem, Rule } from "./types";
+import type { NotificationItem, Rule, Theme } from "./types";
 
 // 実行ログ1件分の型です。
 // 画面下のログ表示で使います。
@@ -14,6 +14,11 @@ type AccessMode = "signed-out" | "guest" | "authenticated";
 type AuthIntent = "login" | "register";
 type AppView = "home" | "settings" | "admin";
 type RuleFrequency = Rule["frequency"];
+const THEME_OPTIONS: Theme[] = ["名言", "雑学", "励まし"];
+
+function isTheme(value: unknown): value is Theme {
+  return value === "名言" || value === "雑学" || value === "励まし";
+}
 
 type StoredSession = {
   baseUrl: string;
@@ -24,7 +29,7 @@ type StoredSession = {
 
 type UserPreferences = {
   displayName: string;
-  focusTheme: string;
+  focusTheme: Theme;
   digestTime: string;
   preferredFrequency: RuleFrequency;
 };
@@ -106,8 +111,7 @@ function loadStoredPreferences(accessMode: AccessMode, email: string): UserPrefe
     return {
       displayName:
         typeof parsed.displayName === "string" && parsed.displayName ? parsed.displayName : DEFAULT_PREFERENCES.displayName,
-      focusTheme:
-        typeof parsed.focusTheme === "string" && parsed.focusTheme ? parsed.focusTheme : DEFAULT_PREFERENCES.focusTheme,
+      focusTheme: isTheme(parsed.focusTheme) ? parsed.focusTheme : DEFAULT_PREFERENCES.focusTheme,
       digestTime:
         typeof parsed.digestTime === "string" && parsed.digestTime ? parsed.digestTime : DEFAULT_PREFERENCES.digestTime,
       preferredFrequency:
@@ -155,7 +159,7 @@ export default function App(): ReactElement {
   // =========================================================
   // 3) ルール作成フォームの状態
   // =========================================================
-  const [theme, setTheme] = useState("名言");
+  const [theme, setTheme] = useState<Theme>("名言");
   const [time, setTime] = useState("15:00");
   const [frequency, setFrequency] = useState<"daily" | "weekdays" | "weekly">("daily");
   const [isEnabled, setIsEnabled] = useState(true);
@@ -164,7 +168,7 @@ export default function App(): ReactElement {
   // 4) ルール更新/削除フォームの状態
   // =========================================================
   const [selectedRuleId, setSelectedRuleId] = useState("");
-  const [updateTheme, setUpdateTheme] = useState("改善テーマ");
+  const [updateTheme, setUpdateTheme] = useState<Theme>("励まし");
   const [updateTime, setUpdateTime] = useState("16:30");
   const [updateFrequency, setUpdateFrequency] = useState<"daily" | "weekdays" | "weekly">("weekdays");
   const [updateEnabled, setUpdateEnabled] = useState(false);
@@ -185,6 +189,9 @@ export default function App(): ReactElement {
   const [rules, setRules] = useState<Rule[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [logs, setLogs] = useState<LogItem[]>([]);
+  // 生成された通知をポップアップ表示するための状態です。
+  // null のときはトーストを表示せず、値がセットされたら表示します。
+  const [toastNotification, setToastNotification] = useState<NotificationItem | null>(null);
   // API通信の共通状態を管理する custom hook。
   // loading / error を画面全体で使い回せます。
   const apiState = useApiRequest<unknown>();
@@ -242,6 +249,14 @@ export default function App(): ReactElement {
   }, [accessMode, baseUrl, email, token]);
 
   useEffect(() => {
+    // トーストは6秒後に自動で消します。
+    // コンポーネントが先にアンマウントされた場合は clearTimeout でキャンセルします。
+    if (!toastNotification) return;
+    const timer = setTimeout(() => setToastNotification(null), 6000);
+    return () => clearTimeout(timer);
+  }, [toastNotification]);
+
+  useEffect(() => {
     // ログイン/ゲストの切り替え時は、
     // そのモード専用の表示設定を読み直します。
     // 同時に、前のユーザーのお題やお知らせが見えないように、
@@ -260,6 +275,20 @@ export default function App(): ReactElement {
     // ユーザー切り替え時に前のユーザーのデータをクリア
     setRules([]);
     setNotifications([]);
+  }, [accessMode, email]);
+
+  useEffect(() => {
+    // ログイン/ゲスト切り替え直後にルールと通知を自動取得します。
+    // こうしておくと「最新状態を読み込む」を押さなくてもカウントが正しく出ます。
+    if (accessMode === "signed-out") return;
+    void (async () => {
+      const rulesResult = await apiState.execute(() => api.listRules());
+      if (Array.isArray(rulesResult)) setRules(rulesResult as Rule[]);
+      const notifResult = await apiState.execute(() => api.listNotifications({ page: 1, page_size: 20 }));
+      if (Array.isArray(notifResult)) setNotifications(notifResult as NotificationItem[]);
+    })();
+  // accessMode/email が変わったときだけ実行。api は useMemo 依存なので含める。
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessMode, email]);
 
   // API処理の共通ラッパーです。
@@ -411,6 +440,8 @@ export default function App(): ReactElement {
 
     // 生成後は一覧を見直して反映確認します。
     if (generated) {
+      // 生成した通知をトーストで画面上に表示します。
+      setToastNotification(generated as NotificationItem);
       await handleListNotifications();
     }
   };
@@ -431,8 +462,7 @@ export default function App(): ReactElement {
     }
   };
 
-  const handleMarkRead = async (notificationIdOverride?: string) => {
-    const targetNotificationId = (notificationIdOverride ?? selectedNotificationId).trim();
+  const handleMarkRead = async (notificationIdOverride?: string) => {    const targetNotificationId = (notificationIdOverride ?? selectedNotificationId).trim();
     if (!targetNotificationId) {
       pushLog("Mark Read: notification id is empty");
       return;
@@ -458,6 +488,15 @@ export default function App(): ReactElement {
     await handleHealth();
     await handleListRules();
     await handleListNotifications();
+  };
+
+  const handleDeleteAllNotifications = async () => {
+    const result = await runAction("Delete All Notifications", () => api.deleteAllNotifications());
+    if (result) {
+      setNotifications([]);
+      setToastNotification(null);
+      pushLog(`Delete All Notifications: ${(result as { deleted: number }).deleted}件削除しました`);
+    }
   };
 
   const handleSavePreferences = () => {
@@ -658,29 +697,6 @@ export default function App(): ReactElement {
               <h2>{unreadCount}</h2>
               <p>お知らせは全部で {notifications.length} 件あります。</p>
             </article>
-            <article className="panel stat-card">
-              <p className="eyebrow">いつ受け取りたい？</p>
-              <h2>{preferences.focusTheme}</h2>
-              <p>{preferences.digestTime} ごろに {preferences.preferredFrequency} で受け取る予定です。</p>
-            </article>
-          </section>
-
-          <section className="guide-grid">
-            <article className="panel guide-card">
-              <p className="eyebrow">まずこれ</p>
-              <h2>1. お題をひとつ決める</h2>
-              <p>「名言」や「英単語」など、お知らせで受け取りたいテーマを決めます。</p>
-            </article>
-            <article className="panel guide-card">
-              <p className="eyebrow">次にこれ</p>
-              <h2>2. 受け取る時間を決める</h2>
-              <p>朝・放課後・夜など、自分が見やすい時間に合わせます。</p>
-            </article>
-            <article className="panel guide-card">
-              <p className="eyebrow">最後にこれ</p>
-              <h2>3. お知らせを見て行動する</h2>
-              <p>届いたお知らせを読んで、今日やることを1つだけでも進めます。</p>
-            </article>
           </section>
 
           <section className="panel">
@@ -696,7 +712,13 @@ export default function App(): ReactElement {
             <div className="grid four">
               <label>
                 何について受け取る？
-                <input value={theme} onChange={(e) => setTheme(e.target.value)} />
+                <select value={theme} onChange={(e) => setTheme(e.target.value as Theme)}>
+                  {THEME_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 何時ごろに見る？
@@ -745,18 +767,6 @@ export default function App(): ReactElement {
               ) : (
                 <p className="empty">まだお知らせがありません。管理者タブでお知らせ一覧を読み込むと、ここにも表示されます。</p>
               )}
-            </article>
-
-            <article className="panel feature-card">
-              <div className="section-head">
-                <div>
-                  <p className="eyebrow">保存のしかた</p>
-                  <h2>今のデータはどこにある？</h2>
-                </div>
-              </div>
-              <p className="feature-title">{saveStrategy.title}</p>
-              <p>{saveStrategy.description}</p>
-              <p className="helper-text">くわしい設定は「設定」タブ、APIの状態確認は「管理者」タブにあります。</p>
             </article>
           </section>
 
@@ -864,10 +874,16 @@ export default function App(): ReactElement {
                 </label>
                 <label>
                   まず使いたいテーマ
-                  <input
+                  <select
                     value={preferences.focusTheme}
-                    onChange={(e) => setPreferences((prev) => ({ ...prev, focusTheme: e.target.value }))}
-                  />
+                    onChange={(e) => setPreferences((prev) => ({ ...prev, focusTheme: e.target.value as Theme }))}
+                  >
+                    {THEME_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label>
                   ダイジェスト時刻
@@ -963,7 +979,13 @@ export default function App(): ReactElement {
             <div className="grid four">
               <label>
                 Theme
-                <input value={theme} onChange={(e) => setTheme(e.target.value)} />
+                <select value={theme} onChange={(e) => setTheme(e.target.value as Theme)}>
+                  {THEME_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 Time
@@ -1003,7 +1025,13 @@ export default function App(): ReactElement {
               </label>
               <label>
                 Update Theme
-                <input value={updateTheme} onChange={(e) => setUpdateTheme(e.target.value)} />
+                <select value={updateTheme} onChange={(e) => setUpdateTheme(e.target.value as Theme)}>
+                  {THEME_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 Update Time
@@ -1084,6 +1112,9 @@ export default function App(): ReactElement {
               <button onClick={handleListNotifications} disabled={apiState.loading}>
                 List Notifications
               </button>
+              <button onClick={handleDeleteAllNotifications} disabled={apiState.loading} className="danger-button">
+                お知らせをすべて削除
+              </button>
             </div>
 
             <div className="list-block">
@@ -1114,6 +1145,25 @@ export default function App(): ReactElement {
             </div>
           </section>
         </>
+      )}
+
+      {/* 通知トースト：手動生成したお知らせを画面右上にポップアップで表示します */}
+      {toastNotification && (
+        <div className="notification-toast" role="status" aria-live="polite">
+          <div className="toast-body">
+            <p className="toast-eyebrow">お知らせが届きました</p>
+            <p className="toast-short">{toastNotification.short_text}</p>
+            <p className="toast-action">{toastNotification.action_suggestion}</p>
+          </div>
+          <button
+            type="button"
+            className="toast-close"
+            onClick={() => setToastNotification(null)}
+            aria-label="閉じる"
+          >
+            ✕
+          </button>
+        </div>
       )}
     </main>
   );

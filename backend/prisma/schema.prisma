@@ -18,14 +18,14 @@ model User {
 
 model Rule {
   id            String         @id @default(cuid())
-  userId        Int            @map("user_id")
+  userId        Int?           @map("user_id")
   theme         String
   time          String
   frequency     String
   isEnabled     Boolean        @default(true) @map("is_enabled")
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
   notifications Notification[]
 
   @@map("rules")
@@ -33,7 +33,7 @@ model Rule {
 
 model Notification {
   id               String   @id @default(cuid())
-  userId           Int      @map("user_id")
+  userId           Int?     @map("user_id")
   ruleId           String   @map("rule_id")
   scheduledDate    DateTime @map("scheduled_date")
   shortText        String   @map("short_text")
@@ -41,7 +41,7 @@ model Notification {
   actionSuggestion String   @map("action_suggestion")
   isRead           Boolean  @default(false) @map("is_read")
   createdAt        DateTime @default(now()) @map("created_at")
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   rule             Rule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
