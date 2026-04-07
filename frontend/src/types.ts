@@ -8,9 +8,11 @@ export type AuthResponse = {
   token?: string;
 };
 
+export type Theme = "名言" | "雑学" | "励まし";
+
 export type Rule = {
   id: string;
-  theme: string;
+  theme: Theme;
   time: string;
   frequency: "daily" | "weekdays" | "weekly";
   is_enabled: boolean;

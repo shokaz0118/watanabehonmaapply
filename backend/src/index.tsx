@@ -3,8 +3,9 @@ import dotenv from "dotenv";
 import swaggerUi from "swagger-ui-express";
 import { login, register } from "./auth";
 import { createRule, deleteRule, listRules, updateRule } from "./rules";
-import { generateNotification, listNotifications, markNotificationAsRead } from "./notifications";
+import { generateNotification, listNotifications, markNotificationAsRead, deleteAllNotifications } from "./notifications";
 import openApiDocument from "./docs/openapi";
+import { startNotificationScheduler } from "./services/notificationSchedulerService";
 
 dotenv.config();
 
@@ -50,7 +51,10 @@ app.delete("/api/rules/:id", deleteRule);
 app.post("/api/notifications/generate", generateNotification);
 app.get("/api/notifications", listNotifications);
 app.patch("/api/notifications/:id/read", markNotificationAsRead);
+app.delete("/api/notifications", deleteAllNotifications);
 
 app.listen(port, () => {
   console.log(`Backend listening at http://localhost:${port}`);
+  startNotificationScheduler();
+  console.log("Notification scheduler started (every 60s)");
 });

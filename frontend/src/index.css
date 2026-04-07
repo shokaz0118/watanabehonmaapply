@@ -260,6 +260,16 @@ button:disabled {
 	border: 1px solid #cdbca8;
 }
 
+.danger-button {
+	color: #fff;
+	background: linear-gradient(135deg, #b0302a, #d94f47);
+	border: 1px solid #962520;
+}
+
+.danger-button:hover {
+	box-shadow: 0 8px 20px rgba(176, 48, 42, 0.35);
+}
+
 .status-pill {
 	display: inline-flex;
 	align-items: center;
@@ -449,6 +459,90 @@ button:disabled {
 
 .log-area p {
 	margin: 0 0 6px;
+}
+
+/* =========================================================
+   通知トースト
+   手動生成したお知らせを右上にスライドインで表示します。
+   6秒後に自動消滅し、✕ボタンでも閉じられます。
+   ========================================================= */
+.notification-toast {
+	position: fixed;
+	top: 20px;
+	right: 20px;
+	max-width: 380px;
+	width: calc(100% - 40px);
+	background: var(--panel);
+	border: 2px solid var(--accent);
+	border-radius: 16px;
+	padding: 16px 18px;
+	box-shadow: 0 8px 28px rgba(207, 95, 47, 0.2);
+	z-index: 1000;
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+	animation: toast-in 0.35s ease;
+}
+
+@keyframes toast-in {
+	from {
+		transform: translateX(110%);
+		opacity: 0;
+	}
+	to {
+		transform: translateX(0);
+		opacity: 1;
+	}
+}
+
+.toast-body {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.toast-eyebrow {
+	font-size: 0.72rem;
+	font-weight: 700;
+	color: var(--accent);
+	margin: 0;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.toast-short {
+	font-size: 1rem;
+	font-weight: 700;
+	color: var(--ink);
+	margin: 0;
+	line-height: 1.4;
+}
+
+.toast-action {
+	font-size: 0.83rem;
+	color: var(--sub);
+	margin: 0;
+	line-height: 1.5;
+}
+
+.toast-close {
+	background: transparent;
+	border: none;
+	color: var(--sub);
+	font-size: 1rem;
+	cursor: pointer;
+	padding: 0;
+	line-height: 1;
+	min-width: auto;
+	box-shadow: none;
+	flex-shrink: 0;
+}
+
+.toast-close:hover {
+	color: var(--ink);
+	transform: none;
+	box-shadow: none;
 }
 
 @media (max-width: 940px) {

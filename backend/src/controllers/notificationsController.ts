@@ -4,6 +4,7 @@ import {
   type GenerateNotificationInput,
   type ListNotificationsInput,
   markNotificationAsReadService,
+  deleteAllNotificationsService,
 } from "../services/notificationService";
 import type { NotificationRecord } from "../repositories/notificationRepository";
 import { extractUserIdFromToken } from "../utils/jwt";
@@ -118,6 +119,17 @@ export async function markNotificationAsRead(req: RequestLike, res: ResponseLike
     }
 
     return res.json(toNotificationResponse(result.data));
+  } catch (_error) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// 全通知を削除するAPIです。
+export async function deleteAllNotifications(req: RequestLike, res: ResponseLike): Promise<ResponseLike> {
+  try {
+    const userId = extractUserIdFromToken(req.headers?.authorization) ?? undefined;
+    const count = await deleteAllNotificationsService(userId);
+    return res.json({ deleted: count });
   } catch (_error) {
     return res.status(500).json({ error: "Internal server error" });
   }

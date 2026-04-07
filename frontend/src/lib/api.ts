@@ -148,5 +148,12 @@ export function createApiClient(config: ApiClientConfig) {
         method: "PATCH",
       });
     },
+
+    // 通知を全件削除
+    deleteAllNotifications: async (): Promise<{ deleted: number }> => {
+      return requestJson<{ deleted: number }>(config, "/api/notifications", {
+        method: "DELETE",
+      });
+    },
   };
 }
