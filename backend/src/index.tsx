@@ -25,7 +25,7 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 app.use(cors({
-  origin: "https://watanabehonmaapply-j5oz29xcd-shos-projects-71469e95.vercel.app/"
+  origin: "https://watanabehonmaapply-j5oz29xcd-shos-projects-71469e95.vercel.app"
 }));
 app.use(express.json());
 
