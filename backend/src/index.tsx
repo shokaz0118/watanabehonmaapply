@@ -6,6 +6,7 @@ import { createRule, deleteRule, listRules, updateRule } from "./rules";
 import { generateNotification, listNotifications, markNotificationAsRead, deleteAllNotifications } from "./notifications";
 import openApiDocument from "./docs/openapi";
 import { startNotificationScheduler } from "./services/notificationSchedulerService";
+import cors from "cors";
 
 dotenv.config();
 
@@ -23,6 +24,9 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 
+app.use(cors({
+  origin: "https://watanabehonmaapply-iiex59ddp-shos-projects-71469e95.vercel.app"
+}));
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
